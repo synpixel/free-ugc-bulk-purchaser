@@ -101,13 +101,13 @@ async fn get_authenticated_user(
 async fn authenticated_user_owns_bundle(
     client: &Client,
     auth: &String,
-    item_id: u64,
+    item: &MarketplaceQueryResponseItem,
 ) -> Result<bool, Box<dyn std::error::Error>> {
     let authenticated_user_id = get_authenticated_user(client, auth).await?.id;
     let user_owns_bundle = client
         .get(format!(
-            "https://inventory.roblox.com/v1/users/{}/items/3/{}/is-owned",
-            authenticated_user_id, item_id
+            "https://inventory.roblox.com/v1/users/{}/items/{}/{}/is-owned",
+            authenticated_user_id, item.item_type, item.id
         ))
         .header("Cookie", format!(".ROBLOSECURITY={}", auth))
         .send()
@@ -150,7 +150,7 @@ async fn is_asset_available(
     auth: &String,
     asset: &MarketplaceQueryResponseItem,
 ) -> Result<bool, Box<dyn std::error::Error>> {
-    if authenticated_user_owns_bundle(client, auth, asset.id).await? {
+    if authenticated_user_owns_bundle(client, auth, asset).await? {
         return Ok(false);
     }
 
