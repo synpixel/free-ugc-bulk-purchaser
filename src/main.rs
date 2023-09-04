@@ -63,15 +63,25 @@ struct AuthenticatedUserResponse {
 #[derive(Parser)]
 #[command(author, version, about)]
 struct Args {
+    /// Category of assets
+    #[arg(short, long)]
+    category: Option<String>,
+
+    /// Subcategory of assets
+    #[arg(short, long)]
+    subcategory: Option<String>,
+
     /// .ROBLOSECURITY cookie to purchase assets
     #[arg(short, long)]
     auth: String,
 }
 
-fn get_search_url(next_page_cursor: &Option<String>) -> String {
+fn get_search_url(args: &Args, next_page_cursor: &Option<String>) -> String {
+    let category = args.category.clone();
+    let subcategory = args.subcategory.clone();
     format!(
-        "https://catalog.roblox.com/v2/search/items/details?subcategory=37&maxPrice=0&limit=30&cursor={}",
-        next_page_cursor.clone().unwrap_or("".to_string())
+        "https://catalog.roblox.com/v2/search/items/details?category={}&subcategory={}&maxPrice=0&limit=120&cursor={}",
+        category.unwrap_or("".to_string()), subcategory.unwrap_or("".to_string()), next_page_cursor.clone().unwrap_or("".to_string())
     )
 }
 
@@ -140,10 +150,6 @@ async fn is_asset_available(
     auth: &String,
     asset: &MarketplaceQueryResponseItem,
 ) -> Result<bool, Box<dyn std::error::Error>> {
-    if asset.item_type == "Asset" {
-        return Ok(false);
-    }
-
     if authenticated_user_owns_bundle(client, auth, asset.id).await? {
         return Ok(false);
     }
@@ -256,7 +262,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     loop {
         let response = client
-            .get(get_search_url(&next_page_cursor))
+            .get(get_search_url(&args, &next_page_cursor))
             .send()
             .await?
             .json::<MarketplaceQueryResponse>()
